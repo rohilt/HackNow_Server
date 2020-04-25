@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,13 +22,38 @@ func main() {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	err = client.Ping(ctx, readpref.Primary())
+
+	quickstartDatabase := client.Database("quickstart")
+	podcastsCollection := quickstartDatabase.Collection("podcasts")
+	episodeCollection := quickstartDatabase.Collection("episodes")
+	podcastResult, err := podcastsCollection.InsertOne(ctx, bson.D{
+		{Key: "title", Value: "The Polyglot Developer Podcast"},
+		{Key: "author", Value: "Rahul Dani"},
+		//OR you can remove Key and Value and have a comma separated list
+		{"tags", bson.A{"development", "programming", "coding"}},
+		//bson.A is a bson array
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	databases, err := client.ListDatabaseNames(ctx, bson.M{})
+	fmt.Println(podcastResult.InsertedID)
+
+	episodeResult, err := episodeCollection.InsertMany(ctx, []interface{}{
+		bson.D{
+			{"podcast", podcastResult.InsertedID},
+			{"title", "Episode #1"},
+			{"description", "This is the first episode."},
+			{"duration", 25},
+		},
+		bson.D{
+			{"podcast", podcastResult.InsertedID},
+			{"title", "Episode #2"},
+			{"description", "This is the second episode."},
+			{"duration", 32},
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(databases)
+	fmt.Println(episodeResult.InsertedIDs)
 }
