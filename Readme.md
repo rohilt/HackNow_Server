@@ -15,3 +15,10 @@ expected response once driver enters destination address:
         }
     ]
 }
+
+type User {
+    email
+    name
+    phoneNumber
+    address
+}

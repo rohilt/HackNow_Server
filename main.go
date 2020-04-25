@@ -7,9 +7,31 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	// "github.com/graphql-go/graphql"
 )
+
+type User struct {
+	ID primitive.ObjectID `bson:"_id,omitempty"`
+	Name string `bson:"name,omitempty"`
+	Email string `bson:"email,omitempty"`
+	PhoneNumber string `bson:"phoneNumber,omitempty"`
+	Address string `bson:"address,omitempty"`
+}
+
+type Request struct {
+	user User
+	storeAddress string
+	items string
+}
+
+type Store struct {
+	name string
+	address string
+}
 
 func main() {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
@@ -23,37 +45,33 @@ func main() {
 	}
 	defer client.Disconnect(ctx)
 
-	quickstartDatabase := client.Database("quickstart")
-	podcastsCollection := quickstartDatabase.Collection("podcasts")
-	episodeCollection := quickstartDatabase.Collection("episodes")
-	podcastResult, err := podcastsCollection.InsertOne(ctx, bson.D{
-		{Key: "title", Value: "The Polyglot Developer Podcast"},
-		{Key: "author", Value: "Rahul Dani"},
-		//OR you can remove Key and Value and have a comma separated list
-		{"tags", bson.A{"development", "programming", "coding"}},
-		//bson.A is a bson array
-	})
+	hacknowDatabase := client.Database("hacknow")
+	usersCollection := hacknowDatabase.Collection("users")
+	requestsCollection := hacknowDatabase.Collection("requests")
+	rohil := User{
+		Name: "Rohil Tuli", 
+		Email: "rohil.tuli@gmail.com", 
+		PhoneNumber: "8133732574", 
+		Address: "4100 George J Bean Pkwy, Tampa, FL 33607",
+	}
+	userResult, err := usersCollection.InsertOne(ctx, rohil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(podcastResult.InsertedID)
+	fmt.Println(userResult.InsertedID)
 
-	episodeResult, err := episodeCollection.InsertMany(ctx, []interface{}{
+	requestResult, err := requestsCollection.InsertMany(ctx, []interface{}{
 		bson.D{
-			{"podcast", podcastResult.InsertedID},
-			{"title", "Episode #1"},
-			{"description", "This is the first episode."},
-			{"duration", 25},
+			{"user", rohil},
+			{"items", "testing"},
 		},
 		bson.D{
-			{"podcast", podcastResult.InsertedID},
-			{"title", "Episode #2"},
-			{"description", "This is the second episode."},
-			{"duration", 32},
+			{"user", rohil},
+			{"items", "testing again"},
 		},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(episodeResult.InsertedIDs)
+	fmt.Println(requestResult.InsertedIDs)
 }
