@@ -10,10 +10,14 @@ import (
 
 type query struct{}
 type user struct{}
+type account struct{}
 type request struct{}
 
 func (_ *query) Hello() string { return "Hello, world!" }
 func (_ *query) Bye() string   { return "Bye, world!" }
+
+func (_ *account) Name() string        { return "Harry Potter" }
+func (_ *account) PhoneNumber() string { return "1234567890" }
 
 func (_ *user) Name() string        { return "John" }
 func (_ *user) Email() string       { return "ABC" }
@@ -34,6 +38,12 @@ func main() {
 					address: String!
 			}
 		`
+	a := `
+		type Query {
+				name: String!
+				phoneNumber: String!
+		}
+	`
 	r := `
 			type Query {
 				name: String!
@@ -44,7 +54,9 @@ func main() {
 	`
 	userSchema := graphql.MustParseSchema(u, &user{})
 	requestSchema := graphql.MustParseSchema(r, &request{})
+	accountSchema := graphql.MustParseSchema(a, &account{})
 	http.Handle("/user", &relay.Handler{Schema: userSchema})
 	http.Handle("/request", &relay.Handler{Schema: requestSchema})
+	http.Handle("/account", &relay.Handler{Schema: accountSchema})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
