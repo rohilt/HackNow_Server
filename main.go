@@ -4,34 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"encoding/json"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/graphql-go/graphql"
 )
 
 type User struct {
-	ID primitive.ObjectID `bson:"_id,omitempty"`
-	Name string `bson:"name,omitempty"`
-	Email string `bson:"email,omitempty"`
-	PhoneNumber string `bson:"phoneNumber,omitempty"`
-	Address string `bson:"address,omitempty"`
+	ID          primitive.ObjectID `bson:"_id,omitempty"`
+	Name        string             `bson:"name,omitempty"`
+	Email       string             `bson:"email,omitempty"`
+	PhoneNumber string             `bson:"phoneNumber,omitempty"`
+	Address     string             `bson:"address,omitempty"`
 }
 
 type Request struct {
-	user User
+	user         User
+	storeName    string
 	storeAddress string
-	items string
-}
-
-type Store struct {
-	name string
-	address string
+	items        string
 }
 
 func main() {
@@ -50,10 +43,10 @@ func main() {
 	usersCollection := hacknowDatabase.Collection("users")
 	requestsCollection := hacknowDatabase.Collection("requests")
 	rohil := User{
-		Name: "Rohil Tuli", 
-		Email: "rohil.tuli@gmail.com", 
-		PhoneNumber: "8133732574", 
-		Address: "4100 George J Bean Pkwy, Tampa, FL 33607",
+		Name:        "Rohil Tuli",
+		Email:       "rohil.tuli@gmail.com",
+		PhoneNumber: "8133732574",
+		Address:     "4100 George J Bean Pkwy, Tampa, FL 33607",
 	}
 	userResult, err := usersCollection.InsertOne(ctx, rohil)
 	if err != nil {
