@@ -10,7 +10,8 @@ expected response once driver enters destination address:
         {
             dropoffAddress,
             detourTimeDiff,
-            whatToPickup
+            whatToPickup,
+            priceRequested
         }
     ]
 }
