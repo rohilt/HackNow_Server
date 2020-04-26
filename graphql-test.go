@@ -27,6 +27,7 @@ type Account struct {
 
 type Request struct {
 	ItemsField   string   `bson:"items,omitempty"`
+	StoreField   string   `bson:"store,omitempty"`
 	AccountField *Account `bson:"account,omitempty"`
 }
 
@@ -73,6 +74,8 @@ func (r AccountResolver) Account(ctx context.Context, args struct{ PhoneNumber s
 	return &result
 }
 
+// func (r AccountResolver) Requests(ctx context.Context, args struct{ PhoneNumber string })
+
 type PhoneStruct struct {
 	PhoneNumber string
 }
@@ -82,7 +85,31 @@ func (r AccountResolver) CreateRequest(ctx context.Context, args struct {
 	PhoneNumber  string
 	Items        string
 }) *Request {
-	return &Request{ItemsField: args.Items, AccountField: r.Account(ctx, PhoneStruct{args.PhoneNumber})}
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	hacknowDatabase := client.Database("hacknow")
+	requestsCollection := hacknowDatabase.Collection("requests")
+	newRequest := Request{
+		StoreField:        args.StoreAddress,
+		ItemsField:     args.Items,
+		AccountField: r.Account(ctx, PhoneStruct{args.PhoneNumber}),
+	}
+	insertionResult, err := requestsCollection.InsertOne(ctx, newRequest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(insertionResult.InsertedID)
+	return &newRequest
+	// return &Request{ItemsField: args.Items, AccountField: r.Account(ctx, PhoneStruct{args.PhoneNumber})}
 }
 
 func (r AccountResolver) CreateAccount(ctx context.Context, args struct {
@@ -132,6 +159,10 @@ func (a *Request) Items() string {
 	return a.ItemsField
 }
 
+func (a *Request) StoreAddress() string {
+	return a.StoreField
+}
+
 func (a *Request) Account() *Account {
 	return a.AccountField
 }
@@ -174,9 +205,15 @@ func main() {
 		}
 		type Request {
 			items: String!
+			storeAddress: String!
 			account: Account!
 		}
 		`
+		// requests(PhoneNumber: String!, StoreAddress: String!) : RequestsResponse
+													// type RequestsResponse {
+													// 	driver: Account
+													// 	requests: [Request]
+													// }
 	// request(PhoneNumber: String!): [Request]
 	// r := `
 	// 	schema {
