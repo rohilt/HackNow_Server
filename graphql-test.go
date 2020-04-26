@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,22 +16,23 @@ import (
 
 // type query struct{}
 // type user struct{
-	
+
 // }
 
-type Account struct{
-	NameField          string                 `bson:"name,omitempty"`
-	AddressField       string                 `bson:"phoneNumber,omitempty"`
-	PhoneNumberField   string                 `bson:"address,omitempty"`
+type Account struct {
+	NameField        string `bson:"name,omitempty"`
+	AddressField     string `bson:"address,omitempty"`
+	PhoneNumberField string `bson:"phoneNumber,omitempty"`
 }
+
 // type request struct{}
 
-type AccountResolver struct {}
+type AccountResolver struct{}
 
 // func (_ *query) Hello() string { return "Hello, world!" }
 // func (_ *query) Bye() string   { return "Bye, world!" }
 
-func (r AccountResolver) Account(ctx context.Context, args struct{PhoneNumber string}) *Account { 
+func (r AccountResolver) Account(ctx context.Context, args struct{ PhoneNumber string }) *Account {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
 	if err != nil {
 		log.Fatal(err)
@@ -53,9 +54,9 @@ func (r AccountResolver) Account(ctx context.Context, args struct{PhoneNumber st
 	return &result
 }
 
-func (r AccountResolver) CreateAccount(ctx context.Context, args struct{
-	Name string
-	Address string
+func (r AccountResolver) CreateAccount(ctx context.Context, args struct {
+	Name        string
+	Address     string
 	PhoneNumber string
 }) *Account {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
@@ -72,8 +73,8 @@ func (r AccountResolver) CreateAccount(ctx context.Context, args struct{
 	hacknowDatabase := client.Database("hacknow")
 	usersCollection := hacknowDatabase.Collection("users")
 	newAccount := Account{
-		NameField: args.Name,
-		AddressField: args.Address,
+		NameField:        args.Name,
+		AddressField:     args.Address,
 		PhoneNumberField: args.PhoneNumber,
 	}
 	insertionResult, err := usersCollection.InsertOne(ctx, newAccount)
@@ -95,6 +96,7 @@ func (a *Account) Address() string {
 func (a *Account) PhoneNumber() string {
 	return a.PhoneNumberField
 }
+
 // func (_ *user) Name() string        { return "John" }
 // func (_ *user) Email() string       { return "ABC" }
 // func (_ *user) PhoneNumber() string { return "DEF" }
@@ -138,7 +140,7 @@ func main() {
 	// 			storeAddress: String!
 	// 			items: String!
 	// 		}`
-	
+
 	// userSchema := graphql.MustParseSchema(u, &user{})
 	// requestSchema := graphql.MustParseSchema(r, &request{})
 	// http.Handle("/user", &relay.Handler{Schema: userSchema})
