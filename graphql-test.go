@@ -25,12 +25,21 @@ type Account struct {
 	PhoneNumberField string `bson:"phoneNumber,omitempty"`
 }
 
+type Request struct {
+	ItemsField   string   `bson:"items,omitempty"`
+	AccountField *Account `bson:"account,omitempty"`
+}
+
 // type request struct{}
 
 type AccountResolver struct{}
+type RequestResolver struct{}
 
 // func (_ *query) Hello() string { return "Hello, world!" }
 // func (_ *query) Bye() string   { return "Bye, world!" }
+// func (r AccountResolver) Request(ctx context.Context, args struct{ PhoneNumber string }) []*Request {
+// 	return []Request{&Request{}, &Request{}}
+// }
 
 func (r AccountResolver) Account(ctx context.Context, args struct{ PhoneNumber string }) *Account {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
@@ -52,6 +61,18 @@ func (r AccountResolver) Account(ctx context.Context, args struct{ PhoneNumber s
 		return &Account{}
 	}
 	return &result
+}
+
+type PhoneStruct struct {
+	PhoneNumber string
+}
+
+func (r AccountResolver) CreateRequest(ctx context.Context, args struct {
+	StoreAddress string
+	PhoneNumber  string
+	Items        string
+}) *Request {
+	return &Request{ItemsField: args.Items, AccountField: r.Account(ctx, PhoneStruct{args.PhoneNumber})}
 }
 
 func (r AccountResolver) CreateAccount(ctx context.Context, args struct {
@@ -97,6 +118,14 @@ func (a *Account) PhoneNumber() string {
 	return a.PhoneNumberField
 }
 
+func (a *Request) Items() string {
+	return a.ItemsField
+}
+
+func (a *Request) Account() *Account {
+	return a.AccountField
+}
+
 // func (_ *user) Name() string        { return "John" }
 // func (_ *user) Email() string       { return "ABC" }
 // func (_ *user) PhoneNumber() string { return "DEF" }
@@ -123,6 +152,7 @@ func main() {
 		}
 		type Mutation {
 			createAccount(Name: String!, Address: String!, PhoneNumber: String!): Account
+			createRequest(StoreAddress: String!, PhoneNumber: String!, Items: String!): Request
 		}
 		type Query {
 			account(PhoneNumber: String!): Account
@@ -132,7 +162,33 @@ func main() {
 			address: String!
 			phoneNumber: String!
 		}
-	`
+		type Request {
+			items: String!
+			account: Account!
+		}
+		`
+	// request(PhoneNumber: String!): [Request]
+	// r := `
+	// 	schema {
+	// 		query: Query
+	// 		mutation: Mutation
+	// 	}
+	// 	type Mutation {
+	// 		createRequest(StoreAddress: String!, PhoneNumber: String!): Request
+	// 	}
+	// 	type Query {
+	// 		request(PhoneNumber: String!): [Request]
+	// 	}
+	// 	type Request {
+	// 		items: String!
+	// 		account: Account!
+	// 	}
+	// 	type Account {
+	// 		name: String!
+	// 		address: String!
+	// 		phoneNumber: String!
+	// 	}
+	// `
 	// r := `
 	// 		type Query {
 	// 			name: String!
@@ -146,6 +202,8 @@ func main() {
 	// http.Handle("/user", &relay.Handler{Schema: userSchema})
 	// http.Handle("/request", &relay.Handler{Schema: requestSchema})
 	accountSchema := graphql.MustParseSchema(a, &AccountResolver{})
+	//requestSchema := graphql.MustParseSchema(r, &AccountResolver{})
 	http.Handle("/account", &relay.Handler{Schema: accountSchema})
+	//http.Handle("/request", &relay.Handler{Schema: requestSchema})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
