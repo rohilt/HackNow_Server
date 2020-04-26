@@ -35,6 +35,16 @@ type Request struct {
 type AccountResolver struct{}
 type RequestResolver struct{}
 
+func CorsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // allow cross domain AJAX requests
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+		w.WriteHeader(http.StatusOK)
+        next.ServeHTTP(w,r)
+    })
+}
+
 // func (_ *query) Hello() string { return "Hello, world!" }
 // func (_ *query) Bye() string   { return "Bye, world!" }
 // func (r AccountResolver) Request(ctx context.Context, args struct{ PhoneNumber string }) []*Request {
@@ -203,7 +213,7 @@ func main() {
 	// http.Handle("/request", &relay.Handler{Schema: requestSchema})
 	accountSchema := graphql.MustParseSchema(a, &AccountResolver{})
 	//requestSchema := graphql.MustParseSchema(r, &AccountResolver{})
-	http.Handle("/account", &relay.Handler{Schema: accountSchema})
+	http.Handle("/account", CorsMiddleware(&relay.Handler{Schema: accountSchema}))
 	//http.Handle("/request", &relay.Handler{Schema: requestSchema})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":5000", nil))
 }
