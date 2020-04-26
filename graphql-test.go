@@ -3,8 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"log"
 	"net/http"
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,6 +24,51 @@ import (
 
 // }
 
+func getCoordinates(address string) string {
+	resp, err := http.Get("https://api.mapbox.com/geocoding/v5/mapbox.places/" + address + ".json?access_token=pk.eyJ1IjoiMTVkYW5pMSIsImEiOiJjazlmNWdvdG4wMGVvM2xubjdqcTducXM1In0.H7cu4oj3nkFtR23KeFEliQ")
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	var result map[string][](map[string](map[string][]float64))
+	err = json.Unmarshal(body, &result)
+	// var result2 map[string]interface{}
+	// err = json.Unmarshal(result, &result2)
+	// log.Println(string(body))
+	log.Println(result["features"][0]["geometry"]["coordinates"])
+	lat := strconv.FormatFloat(result["features"][0]["geometry"]["coordinates"][0], 'f', -1, 64)
+	//lat := (result["features"][0]["geometry"]["coordinates"][0]).string
+	long := strconv.FormatFloat(result["features"][0]["geometry"]["coordinates"][1], 'f', -1, 64)
+	//long := (result["features"][0]["geometry"]["coordinates"][1]).string
+	return lat + "," + long
+}
+
+func mapBoxDriver(address1, address2 string) string {
+
+	address1New := strings.ReplaceAll(address1, " ", "%20")
+	address2New := strings.ReplaceAll(address2, " ", "%20")
+	requestBody := "coordinates=" + getCoordinates(address1New) + ";" + getCoordinates(address2New)
+
+	resp, err := http.Post("https://api.mapbox.com/directions/v5/mapbox/driving?access_token=pk.eyJ1IjoiMTVkYW5pMSIsImEiOiJjazlmNWdvdG4wMGVvM2xubjdqcTducXM1In0.H7cu4oj3nkFtR23KeFEliQ", "application/x-www-form-urlencoded", bytes.NewBufferString(requestBody))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println(string(body))
+	return string(body)
+	// log.Println(resp)
+}
+
+
 type Account struct {
 	NameField        string `bson:"name,omitempty"`
 	AddressField     string `bson:"address,omitempty"`
@@ -31,6 +81,8 @@ type Request struct {
 }
 
 // type request struct{}
+
+
 
 type AccountResolver struct{}
 type RequestResolver struct{}
@@ -47,9 +99,28 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 // func (_ *query) Hello() string { return "Hello, world!" }
 // func (_ *query) Bye() string   { return "Bye, world!" }
-// func (r AccountResolver) Request(ctx context.Context, args struct{ PhoneNumber string }) []*Request {
+func (r AccountResolver) Request(ctx context.Context, args struct{ StoreAddress string }) *Request {
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	hacknowDatabase := client.Database("hacknow")
+	requestsCollection := hacknowDatabase.Collection("requests")
+	var result Request
+	err = requestsCollection.FindOne(ctx, bson.D{{"store", args.StoreAddress}}).Decode(&result)
+	if err != nil {
+		return &Request{}
+	}
+	return &result
 // 	return []Request{&Request{}, &Request{}}
-// }
+}
 
 func (r AccountResolver) Account(ctx context.Context, args struct{ PhoneNumber string }) *Account {
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://15dani1:hacknow@cluster0-f47on.gcp.mongodb.net/test?retryWrites=true&w=majority"))
@@ -166,6 +237,7 @@ func main() {
 		}
 		type Query {
 			account(PhoneNumber: String!): Account
+			request(StoreAddress: String!): Request
 		}
 		type Account {
 			name: String!
@@ -211,6 +283,7 @@ func main() {
 	// requestSchema := graphql.MustParseSchema(r, &request{})
 	// http.Handle("/user", &relay.Handler{Schema: userSchema})
 	// http.Handle("/request", &relay.Handler{Schema: requestSchema})
+	log.Println(mapBoxDriver("Land O Lakes", "Orlando"))
 	accountSchema := graphql.MustParseSchema(a, &AccountResolver{})
 	//requestSchema := graphql.MustParseSchema(r, &AccountResolver{})
 	http.Handle("/account", CorsMiddleware(&relay.Handler{Schema: accountSchema}))
